@@ -3,6 +3,7 @@ x-airflow-env: &airflow-env
   AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
   AIRFLOW__CORE__LOAD_EXAMPLES: "false"
   AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+  AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT: '{"conn_type":"google_cloud_platform","extra":{"key_path":"/opt/airflow/credentials/gcp-sa.json","project":"${GCP_PROJECT_ID}"}}'
   # --- Project config ---
   GCP_PROJECT_ID: ${GCP_PROJECT_ID}
   GCS_BUCKET_NAME: ${GCS_BUCKET_NAME}
