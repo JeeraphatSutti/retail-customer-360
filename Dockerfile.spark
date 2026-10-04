@@ -1,0 +1,9 @@
+FROM apache/spark:3.5.1-scala2.12-java17-python3-ubuntu
+
+USER root
+RUN pip3 install --no-cache-dir pandas==2.1.4 pyarrow==14.0.2 google-cloud-storage
+
+# GCS connector for gs:// access
+ADD --chmod=644 https://repo1.maven.org/maven2/com/google/cloud/bigdataoss/gcs-connector/hadoop3-2.2.21/gcs-connector-hadoop3-2.2.21-shaded.jar /opt/spark/jars/
+
+USER spark

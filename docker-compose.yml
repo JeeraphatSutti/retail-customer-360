@@ -1,0 +1,110 @@
+x-airflow-env: &airflow-env
+  AIRFLOW__CORE__EXECUTOR: LocalExecutor
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+  AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+  AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+  # --- Project config ---
+  GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+  GCS_BUCKET_NAME: ${GCS_BUCKET_NAME}
+  BQ_LOCATION: ${BQ_LOCATION:-asia-southeast1}
+  GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/credentials/gcp-sa.json
+  DBT_PROFILES_DIR: /opt/airflow/dbt_project
+  SPARK_MASTER_URL: spark://spark-master:7077
+
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: retail360-airflow:latest
+  user: "${AIRFLOW_UID:-50000}:0"
+  environment: *airflow-env
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./spark_jobs:/opt/airflow/spark_jobs
+    - ./data:/opt/airflow/data
+    - ./dbt_project:/opt/airflow/dbt_project
+    - ./credentials:/opt/airflow/credentials:ro
+    - ./logs:/opt/airflow/logs
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+# Spark mount path เดียวกับ Airflow เพื่อให้ driver และ executor เห็น path ไฟล์ตรงกัน
+x-spark-common: &spark-common
+  build:
+    context: .
+    dockerfile: Dockerfile.spark
+  image: retail360-spark:latest
+  environment:
+    GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/credentials/gcp-sa.json
+  volumes:
+    - ./spark_jobs:/opt/airflow/spark_jobs
+    - ./data:/opt/airflow/data
+    - ./credentials:/opt/airflow/credentials:ro
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  airflow-init:
+    <<: *airflow-common
+    command: version
+    environment:
+      <<: *airflow-env
+      _AIRFLOW_DB_MIGRATE: "true"
+      _AIRFLOW_WWW_USER_CREATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: airflow
+      _AIRFLOW_WWW_USER_PASSWORD: airflow
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    hostname: airflow-scheduler   # ใช้เป็น spark.driver.host (client mode)
+    restart: always
+
+  spark-master:
+    <<: *spark-common
+    hostname: spark-master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master --host spark-master --port 7077 --webui-port 8080
+    ports:
+      - "8081:8080"   # Spark Master UI
+      - "7077:7077"
+
+  spark-worker:
+    <<: *spark-common
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077 --webui-port 8081
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/credentials/gcp-sa.json
+      SPARK_WORKER_CORES: "2"
+      SPARK_WORKER_MEMORY: "2g"
+    ports:
+      - "8082:8081"   # Spark Worker UI
+    depends_on:
+      - spark-master
+
+volumes:
+  postgres-db:
