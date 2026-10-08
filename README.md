@@ -50,6 +50,7 @@ Dataset / Target: gold.customer_360
 แดชบอร์ดติดตามพฤติกรรมลูกค้าแบบ Customer 360 เชื่อมตรงกับตาราง gold.customer_360 บน BigQuery
 
 ![Analytics Dashboard](docs/images/dashboard.png)
+https://datastudio.google.com/s/gsut9oUEX38
 
 Key Metrics Summary:
 Total Customers: 94,990 Unique Customers
