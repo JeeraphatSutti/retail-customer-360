@@ -10,6 +10,7 @@ from airflow.exceptions import AirflowFailException
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQueryOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 PROJECT = os.environ["GCP_PROJECT_ID"]
 BUCKET = os.environ["GCS_BUCKET_NAME"]
@@ -91,3 +92,5 @@ with DAG(
     quality_checks = PythonOperator(task_id="quality_checks", python_callable=run_quality_checks)
 
     check_files >> spark_clean >> load_tasks >> quality_checks
+    trigger_gold = TriggerDagRunOperator(task_id="trigger_gold_dbt", trigger_dag_id="olist_gold_dbt")
+    quality_checks >> trigger_gold

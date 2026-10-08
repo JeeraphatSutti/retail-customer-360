@@ -1,0 +1,49 @@
+version: 2
+
+sources:
+  - name: silver
+    schema: silver
+    tables:
+      - name: customers
+        columns:
+          - name: customer_id
+            tests: [unique, not_null]
+          - name: customer_unique_id
+            tests: [not_null]
+      - name: orders
+        columns:
+          - name: order_id
+            tests: [unique, not_null]
+          - name: customer_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('silver', 'customers')
+                  field: customer_id
+          - name: order_status
+            tests:
+              - accepted_values:
+                  values: [delivered, shipped, canceled, unavailable, invoiced, processing, created, approved]
+      - name: order_items
+        columns:
+          - name: order_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('silver', 'orders')
+                  field: order_id
+      - name: order_payments
+        columns:
+          - name: order_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('silver', 'orders')
+                  field: order_id
+      - name: order_reviews
+        columns:
+          - name: review_score
+            tests:
+              - accepted_values:
+                  values: [1, 2, 3, 4, 5]
+                  quote: false

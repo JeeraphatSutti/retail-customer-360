@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: customer_rfm
+    columns:
+      - name: customer_unique_id
+        tests: [unique, not_null]
+      - name: r_score
+        tests:
+          - accepted_values: {values: [1, 2, 3, 4], quote: false}
+      - name: rfm_segment
+        tests:
+          - accepted_values:
+              values: [loyal, new_high_value, recent, at_risk_high_value, lapsed]
+
+  - name: customer_review_features
+    columns:
+      - name: customer_unique_id
+        tests: [unique, not_null]
+
+  - name: customer_basket_payment_features
+    columns:
+      - name: customer_unique_id
+        tests: [unique, not_null]
+
+  - name: customer_360
+    description: "Feature store table, one row per real customer (customer_unique_id)."
+    columns:
+      - name: customer_unique_id
+        tests: [unique, not_null]
+      - name: customer_state
+        tests: [not_null]

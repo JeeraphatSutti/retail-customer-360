@@ -2,3 +2,15 @@ name: retail_360
 version: "1.0.0"
 config-version: 2
 profile: retail_360
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+
+models:
+  retail_360:
+    staging:
+      +materialized: ephemeral
+    marts:
+      +materialized: table
+      +schema: gold
